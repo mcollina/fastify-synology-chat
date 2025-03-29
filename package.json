@@ -1,0 +1,32 @@
+{
+  "name": "fastify-synology-chat",
+  "version": "0.0.1",
+  "description": "Integration with Synology Chat for Fastify",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-reporter=dot --experimental-test-coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcollina/fastify-synology-chat.git"
+  },
+  "keywords": [
+    "synology",
+    "chat",
+    "fastify"
+  ],
+  "author": "Matteo Collina <hello@matteocollina.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mcollina/fastify-synology-chat/issues"
+  },
+  "homepage": "https://github.com/mcollina/fastify-synology-chat#readme",
+  "devDependencies": {
+    "eslint": "^9.23.0",
+    "fastify": "^5.2.2",
+    "neostandard": "^0.12.1"
+  }
+}
