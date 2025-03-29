@@ -9,6 +9,7 @@ A Fastify plugin for easy integration with Synology Chat's webhook functionality
 ## Features
 
 - Simple webhook endpoint for receiving Synology Chat messages
+- Send messages to Synology Chat channels using a convenient decorator
 - Customizable route path
 - Support for text messages and file uploads
 - Easy message handling through callback function
@@ -32,6 +33,7 @@ const fastify = Fastify()
 fastify.register(synologyChat, {
   // Options (all are optional)
   path: '/webhook',      // Default: '/synology-chat'
+  webhookUrl: 'https://your-synology-chat-webhook-url',
   onMessage: (payload) => {
     console.log('Received message:', payload.text)
     // Return a response to Synology Chat
@@ -39,16 +41,23 @@ fastify.register(synologyChat, {
   }
 })
 
+// Send message using the decorator
+fastify.get('/send-message', async (request, reply) => {
+  const result = await fastify.synologyChat.sendMessage('Hello from Fastify!')
+  return { success: true, result }
+})
+
 fastify.listen({ port: 3000 })
 ```
 
 ### Plugin Options
 
-| Option     | Type       | Default           | Description                                       |
-|------------|------------|-------------------|---------------------------------------------------|
-| `path`     | `string`   | `/synology-chat`  | URL path for the webhook endpoint                 |
-| `onMessage`| `Function` | `() => ({success: true})` | Callback function for handling webhook messages |
-| `required` | `boolean`  | `false`           | Whether the onMessage callback is required        |
+| Option       | Type       | Default           | Description                                       |
+|--------------|------------|-------------------|---------------------------------------------------|
+| `path`       | `string`   | `/synology-chat`  | URL path for the webhook endpoint                 |
+| `onMessage`  | `Function` | `() => ({success: true})` | Callback function for handling webhook messages |
+| `required`   | `boolean`  | `false`           | Whether the onMessage callback is required        |
+| `webhookUrl` | `string`   | `null`            | Synology Chat incoming webhook URL for sending messages |
 
 ### Webhook Payload
 
@@ -69,7 +78,7 @@ The `onMessage` callback can return:
 - A string: Will be sent as plain text response
 - `undefined` or `null`: Will send a default `{ success: true }` response
 
-## Examples
+## Receiving Messages
 
 ### Basic Usage
 
@@ -129,12 +138,68 @@ fastify.register(synologyChat, {
 })
 ```
 
+## Sending Messages
+
+The plugin adds a `synologyChat` decorator to your Fastify instance with a `sendMessage` method that allows you to easily send messages to Synology Chat.
+
+### Basic Sending
+
+```javascript
+// Simple text message
+await fastify.synologyChat.sendMessage('Hello from Fastify!')
+
+// Message with formatted text
+await fastify.synologyChat.sendMessage('Check out this link: <https://example.com|Click here>')
+```
+
+### Rich Messages with Attachments
+
+```javascript
+// Complex message with attachments and buttons
+await fastify.synologyChat.sendMessage({
+  text: '📊 **Monthly Report**',
+  attachments: [
+    {
+      text: 'Sales have increased by 20% compared to last month.',
+      actions: [
+        {
+          type: 'button',
+          name: 'view_report',
+          text: 'View Full Report',
+          value: 'view_full_report',
+          style: 'blue'
+        },
+        {
+          type: 'button',
+          name: 'export_data',
+          text: 'Export Data',
+          value: 'export_report_data',
+          style: 'green'
+        }
+      ]
+    }
+  ]
+})
+```
+
+### Using Custom Webhook URL
+
+You can override the default webhook URL by passing a second parameter to `sendMessage`:
+
+```javascript
+// Send to a different Synology Chat webhook
+await fastify.synologyChat.sendMessage(
+  'This message is sent to a specific channel',
+  'https://your-custom-webhook-url'
+)
+```
+
 ## Synology Chat Configuration
 
 1. In your Synology Chat, click your profile picture and select "Integration"
 2. Choose "Incoming Webhooks" and create a new webhook
 3. Configure the webhook to point to your Fastify server URL (e.g., `http://your-server:3000/synology-chat`)
-4. Use the generated webhook URL to send messages to your Fastify application
+4. Copy the generated webhook URL to use with the `webhookUrl` option or for sending messages
 
 ## License
 
