@@ -165,10 +165,22 @@ The plugin adds a `synologyChat` decorator to your Fastify instance with a `send
 
 ```javascript
 // Simple text message
-await fastify.synologyChat.sendMessage('Hello from Fastify!')
+// When using a webhook connected to a channel, no user_ids are needed
+await fastify.synologyChat.sendMessage({
+  text: 'Hello from Fastify!'
+})
+
+// Message targeting specific users
+await fastify.synologyChat.sendMessage({
+  text: 'Hello from Fastify!',
+  user_ids: [1, 2, 3]  // Replace with actual user IDs
+})
 
 // Message with formatted text
-await fastify.synologyChat.sendMessage('Check out this link: <https://example.com|Click here>')
+await fastify.synologyChat.sendMessage({
+  text: 'Check out this link: <https://example.com|Click here>',
+  user_ids: [5]  // Optional, if your webhook isn't connected to a channel
+})
 ```
 
 ### Rich Messages with Attachments
@@ -177,6 +189,7 @@ await fastify.synologyChat.sendMessage('Check out this link: <https://example.co
 // Complex message with attachments and buttons
 await fastify.synologyChat.sendMessage({
   text: '📊 **Monthly Report**',
+  user_ids: [1, 2, 3],  // Optional if your webhook is connected to a channel
   attachments: [
     {
       text: 'Sales have increased by 20% compared to last month.',
@@ -208,7 +221,11 @@ You can override the default webhook URL by passing a second parameter to `sendM
 ```javascript
 // Send to a different Synology Chat webhook
 await fastify.synologyChat.sendMessage(
-  'This message is sent to a specific channel',
+  {
+    text: 'This message is sent to a specific channel',
+    // Include user_ids if needed
+    // user_ids: [1, 2, 3]
+  },
   'https://your-custom-webhook-url'
 )
 ```

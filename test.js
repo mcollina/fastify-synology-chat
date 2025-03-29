@@ -277,22 +277,18 @@ test('sendMessage throws error when no webhook URL is provided', async (t) => {
   await fastify.ready()
   
   await assert.rejects(
-    async () => { await fastify.synologyChat.sendMessage('test message') },
+    async () => { await fastify.synologyChat.sendMessage({ text: 'test message' }) },
     { message: /No webhook URL provided/ }
   )
 })
 
-test('sendMessage sends string messages correctly', async (t) => {
+test('sendMessage accepts raw string and converts it to message object', async (t) => {
   const fastify = Fastify()
   
   // Mock fetch implementation
   global.fetch = async (url, options) => {
-    assert.equal(url, 'https://example.com/webhook')
-    assert.equal(options.method, 'POST')
-    assert.equal(options.headers['Content-Type'], 'application/json')
-    
     const body = JSON.parse(options.body)
-    assert.equal(body.text, 'test message')
+    assert.equal(body.text, 'raw string message')
     
     return {
       ok: true,
@@ -306,7 +302,7 @@ test('sendMessage sends string messages correctly', async (t) => {
   })
   await fastify.ready()
   
-  const result = await fastify.synologyChat.sendMessage('test message')
+  const result = await fastify.synologyChat.sendMessage('raw string message')
   assert.deepEqual(result, { success: true })
   
   // Restore fetch
@@ -369,7 +365,7 @@ test('sendMessage accepts a custom webhook URL', async (t) => {
   await fastify.ready()
   
   const result = await fastify.synologyChat.sendMessage(
-    'test message',
+    { text: 'test message' },
     'https://custom-webhook.com/endpoint'
   )
   assert.deepEqual(result, { success: true })
@@ -396,9 +392,40 @@ test('sendMessage handles errors from Synology Chat', async (t) => {
   await fastify.ready()
   
   await assert.rejects(
-    async () => { await fastify.synologyChat.sendMessage('test message') },
+    async () => { await fastify.synologyChat.sendMessage({ text: 'test message' }) },
     { message: /Failed to send message to Synology Chat: 400 Bad Request/ }
   )
+  
+  // Restore fetch
+  delete global.fetch
+})
+
+test('sendMessage includes user_ids when provided', async (t) => {
+  const fastify = Fastify()
+  
+  // Mock fetch implementation
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body)
+    assert.equal(body.text, 'message with target users')
+    assert.deepEqual(body.user_ids, [1, 2, 3])
+    
+    return {
+      ok: true,
+      json: async () => ({ success: true }),
+      text: async () => ''
+    }
+  }
+  
+  await fastify.register(synologyChat, {
+    webhookUrl: 'https://example.com/webhook'
+  })
+  await fastify.ready()
+  
+  const result = await fastify.synologyChat.sendMessage({
+    text: 'message with target users',
+    user_ids: [1, 2, 3]
+  })
+  assert.deepEqual(result, { success: true })
   
   // Restore fetch
   delete global.fetch

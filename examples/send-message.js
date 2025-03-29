@@ -13,7 +13,8 @@
 import Fastify from 'fastify'
 import synologyChat from '../index.js'
 
-const OUTGOING = process.env.SYNOLOGY_OUTGOING
+// Get webhook URL from environment variable if available
+const WEBHOOK_URL = process.env.SYNOLOGY_WEBHOOK_URL || 'YOUR_WEBHOOK_URL'
 
 const fastify = Fastify({
   logger: true
@@ -22,7 +23,7 @@ const fastify = Fastify({
 // Register the plugin with your webhook URL
 fastify.register(synologyChat, {
   // The webhook URL for sending messages to Synology Chat
-  webhookUrl: 'YOUR_WEBHOOK_URL',
+  webhookUrl: WEBHOOK_URL,
   
   // You can still handle incoming webhooks too
   path: '/incoming-webhook',
@@ -35,8 +36,13 @@ fastify.register(synologyChat, {
 // Add a route to test sending a simple message
 fastify.get('/send-simple', async (request, reply) => {
   try {
-    // Send a simple text message
-    const result = await fastify.synologyChat.sendMessage('Hello from Fastify!', OUTGOING)
+    // Send a simple text message with necessary user_ids or to webhook connected to a channel
+    // You can get user_ids from Synology Chat API or admin panel
+    const result = await fastify.synologyChat.sendMessage({
+      text: 'Hello from Fastify!',
+      // If you're targeting specific users, uncomment and add real user IDs:
+      // user_ids: [1, 2, 3]
+    })
     
     return {
       success: true,
@@ -58,6 +64,8 @@ fastify.get('/send-complex', async (request, reply) => {
     // Send a complex message with attachments and buttons
     const message = {
       text: '📊 **Monthly Report**',
+      // If you're targeting specific users, uncomment and add real user IDs:
+      // user_ids: [1, 2, 3],
       attachments: [
         {
           text: 'Sales have increased by 20% compared to last month.',
@@ -102,8 +110,13 @@ fastify.get('/send-custom', async (request, reply) => {
   try {
     // You can specify a different webhook URL per message
     const result = await fastify.synologyChat.sendMessage(
-      'This message is sent to a different webhook URL',
-      'YOUR_ALTERNATIVE_WEBHOOK_URL'
+      // If using a string message format, it will automatically be converted to { text: message }
+      // You may need to add user_ids if your webhook isn't connected to a channel
+      {
+        text: 'This message is sent to a different webhook URL',
+        // user_ids: [1]  // uncomment and add real user IDs if needed
+      },
+      process.env.SYNOLOGY_ALT_WEBHOOK_URL || 'YOUR_ALTERNATIVE_WEBHOOK_URL'
     )
     
     return {
@@ -130,6 +143,12 @@ const start = async () => {
     console.log('- GET /send-complex - Send a message with attachments and buttons')
     console.log('- GET /send-custom - Send a message to a custom webhook URL')
     console.log('- POST /incoming-webhook - Receive incoming webhook messages from Synology Chat')
+    
+    if (WEBHOOK_URL === 'YOUR_WEBHOOK_URL') {
+      console.log('\nℹ️ IMPORTANT: You need to set your actual Synology Chat webhook URL:')
+      console.log('  - Edit this file and replace YOUR_WEBHOOK_URL with your actual webhook URL, or')
+      console.log('  - Set the SYNOLOGY_WEBHOOK_URL environment variable')
+    }
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)

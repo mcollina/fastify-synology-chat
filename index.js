@@ -80,7 +80,12 @@ async function synologyChat (fastify, options) {
       // Format the message if it's a string
       let payload
       if (typeof message === 'string') {
-        payload = { text: message }
+        // Plain string message needs to be converted to payload format
+        payload = { 
+          text: message,
+          // If no user_ids are specified, the message will be sent to the channel
+          // associated with the webhook URL (if one was specified during webhook setup)
+        }
       } else {
         payload = message
       }
