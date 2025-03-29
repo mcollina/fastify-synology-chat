@@ -10,6 +10,7 @@ A Fastify plugin for easy integration with Synology Chat's webhook functionality
 
 - Simple webhook endpoint for receiving Synology Chat messages
 - Send messages to Synology Chat channels using a convenient decorator
+- Handles both JSON and form-encoded webhook formats 
 - Customizable route path
 - Support for text messages and file uploads
 - Easy message handling through callback function
@@ -61,7 +62,9 @@ fastify.listen({ port: 3000 })
 
 ### Webhook Payload
 
-The payload from Synology Chat follows this structure:
+Synology Chat sends webhooks in two formats which are both supported by this plugin:
+
+#### JSON Format
 
 ```typescript
 interface SynologyChatPayload {
@@ -69,6 +72,22 @@ interface SynologyChatPayload {
   file_url?: string;    // Optional URL to a file
 }
 ```
+
+#### Form-encoded Format
+
+Synology Chat may also send the webhook as `application/x-www-form-urlencoded` data in two ways:
+
+1. With a `payload` parameter containing a JSON string:
+```
+payload={"text": "Message text", "file_url": "http://example.com/file.jpg"}
+```
+
+2. With direct form parameters:
+```
+text=Message text&file_url=http://example.com/file.jpg
+```
+
+Both formats are automatically handled by the plugin.
 
 ### Response Format
 

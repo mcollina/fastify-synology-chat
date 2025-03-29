@@ -173,6 +173,93 @@ test('throws error when onMessage is not provided', async (t) => {
   }
 })
 
+test('handles form-encoded webhook with payload parameter', async (t) => {
+  const fastify = Fastify()
+  let receivedPayload = null
+
+  fastify.register(synologyChat, {
+    onMessage: (payload) => {
+      receivedPayload = payload
+      return { success: true }
+    }
+  })
+
+  await fastify.ready()
+
+  // Create a form-urlencoded request with a payload parameter
+  const formData = new URLSearchParams()
+  formData.append('payload', JSON.stringify({ text: 'Form encoded message' }))
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/synology-chat',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded'
+    },
+    payload: formData.toString()
+  })
+
+  assert.equal(response.statusCode, 200)
+  assert.equal(response.json().success, true)
+  assert.equal(receivedPayload.text, 'Form encoded message')
+})
+
+test('handles form-encoded webhook with direct parameters', async (t) => {
+  const fastify = Fastify()
+  let receivedPayload = null
+
+  fastify.register(synologyChat, {
+    onMessage: (payload) => {
+      receivedPayload = payload
+      return { success: true }
+    }
+  })
+
+  await fastify.ready()
+
+  // Create a form-urlencoded request with direct parameters
+  const formData = new URLSearchParams()
+  formData.append('text', 'Direct form encoded message')
+  formData.append('file_url', 'http://example.com/image.jpg')
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/synology-chat',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded'
+    },
+    payload: formData.toString()
+  })
+
+  assert.equal(response.statusCode, 200)
+  assert.equal(response.json().success, true)
+  assert.equal(receivedPayload.text, 'Direct form encoded message')
+  assert.equal(receivedPayload.file_url, 'http://example.com/image.jpg')
+})
+
+test('handles invalid JSON in payload parameter', async (t) => {
+  const fastify = Fastify()
+
+  fastify.register(synologyChat)
+
+  await fastify.ready()
+
+  // Create a form-urlencoded request with invalid JSON in payload
+  const formData = new URLSearchParams()
+  formData.append('payload', '{ invalid json }')
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/synology-chat',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded'
+    },
+    payload: formData.toString()
+  })
+
+  assert.equal(response.statusCode, 400)
+})
+
 test('adds sendMessage decorator', async (t) => {
   const fastify = Fastify()
   await fastify.register(synologyChat, {

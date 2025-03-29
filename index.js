@@ -32,6 +32,34 @@ async function synologyChat (fastify, options) {
   if (typeof onMessage !== 'function') {
     throw new Error('onMessage must be a function')
   }
+  
+  // Register content type parser for form data since Synology Chat uses application/x-www-form-urlencoded
+  fastify.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (req, body, done) => {
+    try {
+      const params = new URLSearchParams(body)
+      // Check if there's a payload parameter, which Synology Chat uses to send JSON
+      if (params.has('payload')) {
+        try {
+          const parsedPayload = JSON.parse(params.get('payload'))
+          done(null, parsedPayload)
+        } catch (err) {
+          // Return a 400 Bad Request for invalid JSON
+          const error = new Error(`Invalid JSON in payload: ${err.message}`)
+          error.statusCode = 400
+          done(error, {})
+        }
+      } else {
+        // Convert form data to object if no payload parameter
+        const result = {}
+        for (const [key, value] of params.entries()) {
+          result[key] = value
+        }
+        done(null, result)
+      }
+    } catch (err) {
+      done(err, {})
+    }
+  })
 
   // Add a decorator to send messages to Synology Chat
   fastify.decorate('synologyChat', {
@@ -158,6 +186,6 @@ function defaultHandler (payload) {
 }
 
 export default fp(synologyChat, {
-  fastify: '5.x',
+  fastify: '>=4.0.0',
   name: 'fastify-synology-chat'
 })
