@@ -44,9 +44,9 @@ const customWebhookSchema = {
       type: 'object',
       properties: {
         user: {
-          oneOf: [
-            { type: 'integer' },
-            { type: 'array', items: { type: 'integer' } }
+          anyOf: [
+            { type: 'string' },
+            { type: 'array', items: { type: 'string' } }
           ]
         },
         text: { type: 'string' },
@@ -74,22 +74,45 @@ fastify.get('/send-simple', queryStringSchema, async (request, reply) => {
   try {
     // Get user_ids from query parameters if provided
     // Example: /send-simple?user=1&user=2&user=3
-    const userIds = request.query.user ? 
-      (Array.isArray(request.query.user) ? 
-        request.query.user : 
-        [request.query.user]) : 
-      undefined;
+    let userIds;
+    try {
+      if (request.query.user) {
+        if (Array.isArray(request.query.user)) {
+          userIds = request.query.user.map(id => parseInt(id, 10));
+          console.log(`Processing multiple users: ${JSON.stringify(userIds)}`);
+        } else {
+          userIds = [parseInt(request.query.user, 10)];
+          console.log(`Processing single user: ${userIds[0]}`);
+        }
+        // Filter out any NaN values
+        userIds = userIds.filter(id => !isNaN(id));
+        if (userIds.length === 0) {
+          console.warn('Warning: All user IDs were invalid numbers');
+          userIds = undefined;
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing user IDs:', err);
+      userIds = undefined;
+    }
     
     // Send a simple text message with necessary user_ids or to webhook connected to a channel
-    const result = await fastify.synologyChat.sendMessage({
-      text: request.query.text || 'Hello from Fastify!',
-      ...(userIds && { user_ids: userIds })
-    })
+    // Try different formats for user IDs based on Synology Chat documentation
+    const messagePayload = {
+      text: request.query.text || 'Hello from Fastify!'
+    };
+    
+    if (userIds && userIds.length > 0) {
+      messagePayload.user_ids = userIds;
+    }
+    
+    const result = await fastify.synologyChat.sendMessage(messagePayload)
     
     return {
       success: true,
       message: 'Message sent successfully',
-      to: userIds || 'channel',
+      to: userIds ? `users: ${JSON.stringify(userIds)}` : 'channel',
+      sent: messagePayload,
       result
     }
   } catch (err) {
@@ -106,16 +129,31 @@ fastify.get('/send-complex', queryStringSchema, async (request, reply) => {
   try {
     // Get user_ids from query parameters if provided
     // Example: /send-complex?user=1&user=2&user=3
-    const userIds = request.query.user ? 
-      (Array.isArray(request.query.user) ? 
-        request.query.user : 
-        [request.query.user]) : 
-      undefined;
+    let userIds;
+    try {
+      if (request.query.user) {
+        if (Array.isArray(request.query.user)) {
+          userIds = request.query.user.map(id => parseInt(id, 10));
+          console.log(`Processing multiple users: ${JSON.stringify(userIds)}`);
+        } else {
+          userIds = [parseInt(request.query.user, 10)];
+          console.log(`Processing single user: ${userIds[0]}`);
+        }
+        // Filter out any NaN values
+        userIds = userIds.filter(id => !isNaN(id));
+        if (userIds.length === 0) {
+          console.warn('Warning: All user IDs were invalid numbers');
+          userIds = undefined;
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing user IDs:', err);
+      userIds = undefined;
+    }
     
     // Send a complex message with attachments and buttons
     const message = {
       text: request.query.text || '📊 **Monthly Report**',
-      ...(userIds && { user_ids: userIds }),
       attachments: [
         {
           text: 'Sales have increased by 20% compared to last month.',
@@ -139,12 +177,33 @@ fastify.get('/send-complex', queryStringSchema, async (request, reply) => {
       ]
     }
     
+    // Try multiple formats for specifying users
+    if (userIds && userIds.length > 0) {
+      // Format 1: user_ids array
+      message.user_ids = userIds;
+      
+      // Format 2: user_id (singular) for single user
+      if (userIds.length === 1) {
+        message.user_id = userIds[0];
+      }
+      
+      // Format 3: Try users array (alternative name)
+      message.users = userIds;
+      
+      // Format 4: Try string username instead of ID
+      message.username = `user_${userIds[0]}`;
+      
+      // Log what we're trying
+      console.log('Trying multiple formats for user targets:', JSON.stringify(message, null, 2));
+    }
+    
     const result = await fastify.synologyChat.sendMessage(message)
     
     return {
       success: true,
       message: 'Complex message sent successfully',
-      to: userIds || 'channel',
+      to: userIds ? `users: ${JSON.stringify(userIds)}` : 'channel',
+      sent: message,
       result
     }
   } catch (err) {
@@ -161,30 +220,67 @@ fastify.get('/send-custom', customWebhookSchema, async (request, reply) => {
   try {
     // Get user_ids from query parameters if provided
     // Example: /send-custom?user=1&user=2&user=3&webhook=https://your-webhook-url
-    const userIds = request.query.user ? 
-      (Array.isArray(request.query.user) ? 
-        request.query.user : 
-        [request.query.user]) : 
-      undefined;
+    let userIds;
+    try {
+      if (request.query.user) {
+        if (Array.isArray(request.query.user)) {
+          userIds = request.query.user.map(id => parseInt(id, 10));
+          console.log(`Processing multiple users: ${JSON.stringify(userIds)}`);
+        } else {
+          userIds = [parseInt(request.query.user, 10)];
+          console.log(`Processing single user: ${userIds[0]}`);
+        }
+        // Filter out any NaN values
+        userIds = userIds.filter(id => !isNaN(id));
+        if (userIds.length === 0) {
+          console.warn('Warning: All user IDs were invalid numbers');
+          userIds = undefined;
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing user IDs:', err);
+      userIds = undefined;
+    }
     
     // Get custom webhook URL from query parameter if provided
     const webhookUrl = request.query.webhook || process.env.SYNOLOGY_ALT_WEBHOOK_URL || 'YOUR_ALTERNATIVE_WEBHOOK_URL';
     
+    // Create the message payload
+    const messagePayload = {
+      text: request.query.text || 'This message is sent to a different webhook URL',
+    };
+    
+    // Try multiple formats for specifying users
+    if (userIds && userIds.length > 0) {
+      // Format 1: user_ids array
+      messagePayload.user_ids = userIds;
+      
+      // Format 2: user_id (singular) for single user
+      if (userIds.length === 1) {
+        messagePayload.user_id = userIds[0];
+      }
+      
+      // Format 3: Try users array (alternative name)
+      messagePayload.users = userIds;
+      
+      // Format 4: Try string username instead of ID
+      messagePayload.username = `user_${userIds[0]}`;
+      
+      // Log what we're trying
+      console.log('Trying multiple formats for user targets:', JSON.stringify(messagePayload, null, 2));
+    }
+    
     // You can specify a different webhook URL per message
     const result = await fastify.synologyChat.sendMessage(
-      // If using a string message format, it will automatically be converted to { text: message }
-      // You may need to add user_ids if your webhook isn't connected to a channel
-      {
-        text: request.query.text || 'This message is sent to a different webhook URL',
-        ...(userIds && { user_ids: userIds })
-      },
+      messagePayload,
       webhookUrl
     )
     
     return {
       success: true,
       message: 'Message sent to custom webhook',
-      to: userIds || 'channel',
+      to: userIds ? `users: ${JSON.stringify(userIds)}` : 'channel',
+      sent: messagePayload,
       webhookUrl: webhookUrl === 'YOUR_ALTERNATIVE_WEBHOOK_URL' ? 
         '(placeholder - please provide a real webhook URL)' : 
         webhookUrl.split('?')[0], // Only show the base URL without query parameters for privacy

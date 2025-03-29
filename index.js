@@ -93,10 +93,7 @@ async function synologyChat (fastify, options) {
       // Send the message to Synology Chat
       const response = await fetch(targetUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        body: 'payload=' + JSON.stringify(payload)
       })
       
       if (!response.ok) {
