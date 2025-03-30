@@ -177,24 +177,10 @@ fastify.get('/send-complex', queryStringSchema, async (request, reply) => {
       ]
     }
     
-    // Try multiple formats for specifying users
+    // Add user_ids if we have any
     if (userIds && userIds.length > 0) {
-      // Format 1: user_ids array
       message.user_ids = userIds;
-      
-      // Format 2: user_id (singular) for single user
-      if (userIds.length === 1) {
-        message.user_id = userIds[0];
-      }
-      
-      // Format 3: Try users array (alternative name)
-      message.users = userIds;
-      
-      // Format 4: Try string username instead of ID
-      message.username = `user_${userIds[0]}`;
-      
-      // Log what we're trying
-      console.log('Trying multiple formats for user targets:', JSON.stringify(message, null, 2));
+      console.log(`Adding user_ids: ${JSON.stringify(userIds)}`);
     }
     
     const result = await fastify.synologyChat.sendMessage(message)
@@ -250,24 +236,10 @@ fastify.get('/send-custom', customWebhookSchema, async (request, reply) => {
       text: request.query.text || 'This message is sent to a different webhook URL',
     };
     
-    // Try multiple formats for specifying users
+    // Add user_ids if we have any
     if (userIds && userIds.length > 0) {
-      // Format 1: user_ids array
       messagePayload.user_ids = userIds;
-      
-      // Format 2: user_id (singular) for single user
-      if (userIds.length === 1) {
-        messagePayload.user_id = userIds[0];
-      }
-      
-      // Format 3: Try users array (alternative name)
-      messagePayload.users = userIds;
-      
-      // Format 4: Try string username instead of ID
-      messagePayload.username = `user_${userIds[0]}`;
-      
-      // Log what we're trying
-      console.log('Trying multiple formats for user targets:', JSON.stringify(messagePayload, null, 2));
+      console.log(`Adding user_ids: ${JSON.stringify(userIds)}`);
     }
     
     // You can specify a different webhook URL per message

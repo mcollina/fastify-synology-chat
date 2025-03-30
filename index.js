@@ -102,11 +102,8 @@ async function synologyChat (fastify, options) {
       // Validate the message
       const valid = validateMessage(message)
       if (!valid) {
-        const errors = validateMessage.errors
-          .map(error => `${error.instancePath} ${error.message}`)
-          .join(', ')
-        
-        throw new Error(`Invalid message format: ${errors}`)
+        fastify.log.error({ errors: validateMessage.errors }, 'Invalid message format')
+        throw new Error(`Invalid message format, check logs for more details`)
       }
       
       // Format the message if it's a string
