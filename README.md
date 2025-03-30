@@ -159,7 +159,7 @@ fastify.register(synologyChat, {
 
 ## Sending Messages
 
-The plugin adds a `synologyChat` decorator to your Fastify instance with a `sendMessage` method that allows you to easily send messages to Synology Chat.
+The plugin adds a `synologyChat` decorator to your Fastify instance with a `sendMessage` method that allows you to easily send messages to Synology Chat. All messages are validated against a JSON schema to ensure compatibility with Synology Chat's API.
 
 ### Basic Sending
 
@@ -213,6 +213,22 @@ await fastify.synologyChat.sendMessage({
   ]
 })
 ```
+
+### Message Validation
+
+Messages sent via `synologyChat.sendMessage()` are strictly validated to ensure they match Synology Chat's API requirements. The validation enforces the following rules:
+
+- String messages are directly allowed
+- Object messages must have a `text` property
+- `user_ids` must be an array of integers
+- `file_url` must be a valid URL string
+- `attachments` must be an array of attachment objects
+- Each attachment must have a `text` property
+- Button actions must have `type`, `name`, `text`, and `value` properties
+- Button `style` must be one of: 'green', 'grey', 'red', 'orange', 'blue', 'teal'
+- No additional properties are allowed in objects (strict schema validation)
+
+If validation fails, an error will be thrown with details about the validation failures.
 
 ### Using Custom Webhook URL
 

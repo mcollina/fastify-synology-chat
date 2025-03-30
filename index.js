@@ -5,6 +5,9 @@
  */
 
 import fp from 'fastify-plugin'
+import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
+import { messageSchema } from './schemas/message-schema.js'
 
 /**
  * Synology Chat webhook plugin for Fastify
@@ -16,6 +19,22 @@ import fp from 'fastify-plugin'
  * @param {boolean} [options.required=false] - Whether onMessage callback is required
  * @param {string} [options.webhookUrl] - Synology Chat incoming webhook URL for sending messages
  */
+/**
+ * Initialize Ajv instance with formats
+ * @returns {Function} Message validator function
+ */
+function createValidator() {
+  const ajv = new Ajv({
+    allErrors: true,
+    removeAdditional: false,
+    useDefaults: true,
+    coerceTypes: false,
+  })
+  addFormats(ajv)
+  
+  return ajv.compile(messageSchema)
+}
+
 async function synologyChat (fastify, options) {
   const {
     path = '/synology-chat',
@@ -23,6 +42,9 @@ async function synologyChat (fastify, options) {
     required = false,
     webhookUrl = null
   } = options
+
+  // Create message validator
+  const validateMessage = createValidator()
 
   // Validate options
   if (required && typeof onMessage === 'function' && onMessage === defaultHandler) {
@@ -75,6 +97,16 @@ async function synologyChat (fastify, options) {
       
       if (!targetUrl) {
         throw new Error('No webhook URL provided. Set it in the plugin options or pass it to sendMessage()')
+      }
+      
+      // Validate the message
+      const valid = validateMessage(message)
+      if (!valid) {
+        const errors = validateMessage.errors
+          .map(error => `${error.instancePath} ${error.message}`)
+          .join(', ')
+        
+        throw new Error(`Invalid message format: ${errors}`)
       }
       
       // Format the message if it's a string

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import { strict as assert } from 'node:assert'
 import Fastify from 'fastify'
-import synologyChat from './index.js'
+import synologyChat from '../index.js'
 import { setTimeout } from 'node:timers/promises'
 
 test('registers the plugin correctly', async (t) => {
