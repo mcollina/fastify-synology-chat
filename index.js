@@ -102,8 +102,12 @@ async function synologyChat (fastify, options) {
       // Validate the message
       const valid = validateMessage(message)
       if (!valid) {
-        fastify.log.error({ errors: validateMessage.errors }, 'Invalid message format')
-        throw new Error(`Invalid message format, check logs for more details`)
+        fastify.log.error(validateMessage.errors, 'Invalid message format')
+        const errors = validateMessage.errors
+          .map(error => `${error.instancePath} ${error.message}`)
+          .join(', ')
+        
+        throw new Error(`Invalid message format: ${errors}`)
       }
       
       // Format the message if it's a string
@@ -142,45 +146,79 @@ async function synologyChat (fastify, options) {
   // Schema for webhook payload validation
   const webhookSchema = {
     body: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        file_url: { type: 'string' },
-        user_ids: { 
-          type: 'array',
-          items: { type: 'number' }
-        },
-        attachments: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              callback_id: { type: 'string' },
-              text: { type: 'string' },
-              actions: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    type: { type: 'string', enum: ['button'] },
-                    text: { type: 'string' },
-                    name: { type: 'string' },
-                    value: { type: 'string' },
-                    style: { 
-                      type: 'string', 
-                      enum: ['green', 'grey', 'red', 'orange', 'blue', 'teal']
+      oneOf: [
+        // Regular message schema
+        {
+          type: 'object',
+          properties: {
+            text: { type: 'string' },
+            file_url: { type: 'string' },
+            user_ids: { 
+              type: 'array',
+              items: { type: 'number' }
+            },
+            attachments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  callback_id: { type: 'string' },
+                  text: { type: 'string' },
+                  actions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        type: { type: 'string', enum: ['button'] },
+                        text: { type: 'string' },
+                        name: { type: 'string' },
+                        value: { type: 'string' },
+                        style: { 
+                          type: 'string', 
+                          enum: ['green', 'grey', 'red', 'orange', 'blue', 'teal']
+                        }
+                      },
+                      required: ['type', 'name', 'text', 'value']
                     }
-                  },
-                  required: ['type', 'name', 'text', 'value']
+                  }
+                },
+                required: ['text']
+              }
+            }
+          },
+          required: ['text'],
+          additionalProperties: true
+        },
+        // Button callback schema
+        {
+          type: 'object',
+          properties: {
+            actions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string' },
+                  name: { type: 'string' },
+                  value: { type: 'string' }
                 }
               }
             },
-            required: ['text']
-          }
+            callback_id: { type: 'string' },
+            token: { type: 'string' },
+            post_id: { type: 'string' },
+            user: {
+              type: 'object',
+              properties: {
+                user_id: { type: 'integer' },
+                username: { type: 'string' }
+              }
+            }
+          },
+          required: ['actions', 'callback_id'],
+          additionalProperties: true
         }
-      },
-      required: ['text'],
-      additionalProperties: true
+      ]
     }
   }
 

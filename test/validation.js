@@ -39,6 +39,7 @@ test('validates complex messages with attachments', () => {
     attachments: [
       {
         text: 'Attachment text',
+        callback_id: 'test_callback',  // Add callback_id for actions with buttons
         actions: [
           {
             type: 'button',
@@ -88,10 +89,6 @@ test('rejects messages without required text property', () => {
   const valid = validateMessage(message)
   assert.equal(valid, false)
   
-  // Check specific error message
-  // Check that validation failed
-  assert.equal(valid, false)
-  
   // Check that we have a relevant error
   const hasMissingTextError = validateMessage.errors.some(
     error => error.keyword === 'required' && error.params.missingProperty === 'text'
@@ -105,6 +102,7 @@ test('rejects messages with invalid button types', () => {
     attachments: [
       {
         text: 'Attachment text',
+        callback_id: 'test_callback',  // Required for attachments with actions
         actions: [
           {
             type: 'not_a_valid_type', // Invalid type
@@ -133,6 +131,7 @@ test('rejects messages with invalid button style', () => {
     attachments: [
       {
         text: 'Attachment text',
+        callback_id: 'test_callback',  // Required for attachments with actions
         actions: [
           {
             type: 'button',
@@ -162,6 +161,7 @@ test('rejects attachments without required text property', () => {
     attachments: [
       {
         // Missing text property
+        callback_id: 'test_callback',
         actions: [
           {
             type: 'button',
@@ -216,4 +216,34 @@ test('rejects malformed user_ids (non-integer values)', () => {
     error => error.keyword === 'type' && error.instancePath === '/user_ids/1'
   )
   assert.equal(hasTypeError, true)
+})
+
+test('rejects attachments with actions but missing callback_id', () => {
+  const message = {
+    text: 'Hello with attachment',
+    attachments: [
+      {
+        text: 'Attachment text',
+        // Missing callback_id
+        actions: [
+          {
+            type: 'button',
+            name: 'action_1',
+            text: 'Click me',
+            value: 'btn_1'
+          }
+        ]
+      }
+    ]
+  }
+  
+  const valid = validateMessage(message)
+  assert.equal(valid, false)
+  
+  // Check for the required error for callback_id
+  const hasCallbackIdRequiredError = validateMessage.errors.some(
+    error => error.keyword === 'required' && 
+            error.params.missingProperty === 'callback_id'
+  )
+  assert.equal(hasCallbackIdRequiredError, true)
 })

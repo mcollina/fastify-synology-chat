@@ -65,6 +65,26 @@ fastify.register(synologyChat, {
   path: '/incoming-webhook',
   onMessage: (payload) => {
     console.log('Received webhook payload:', payload)
+    
+    // Check if this is a button callback
+    if (payload.actions && payload.callback_id) {
+      const action = payload.actions[0]
+      console.log(`Button clicked: ${action.name} with value: ${action.value}`)
+      
+      // Handle different button actions
+      if (payload.callback_id === 'monthly_report') {
+        if (action.name === 'view_report') {
+          return { text: 'Showing monthly report details...' }
+        } else if (action.name === 'export_data') {
+          return { text: 'Exporting report data...' }
+        }
+      }
+      
+      // Default response for unknown buttons
+      return { text: `Button '${action.name}' clicked with value '${action.value}'` }
+    }
+    
+    // Default response for regular messages
     return { text: 'Webhook received!' }
   }
 })
@@ -157,6 +177,7 @@ fastify.get('/send-complex', queryStringSchema, async (request, reply) => {
       attachments: [
         {
           text: 'Sales have increased by 20% compared to last month.',
+          callback_id: 'monthly_report',  // Adding the required callback_id
           actions: [
             {
               type: 'button',

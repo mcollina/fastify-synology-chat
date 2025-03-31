@@ -34,6 +34,23 @@ const attachmentSchema = {
     }
   },
   required: ['text'],
+  // If actions are present, we also require callback_id
+  allOf: [
+    {
+      if: {
+        required: ['actions'],
+        properties: {
+          actions: { 
+            type: 'array',
+            minItems: 1 
+          }
+        }
+      },
+      then: {
+        required: ['callback_id']
+      }
+    }
+  ],
   additionalProperties: false
 };
 

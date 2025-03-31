@@ -230,6 +230,71 @@ Messages sent via `synologyChat.sendMessage()` are strictly validated to ensure 
 
 If validation fails, an error will be thrown with details about the validation failures.
 
+### Interactive Buttons
+
+Synology Chat supports interactive buttons that users can click on. When sending messages with buttons, you must include a `callback_id` in each attachment that contains actions:
+
+```javascript
+await fastify.synologyChat.sendMessage({
+  text: '📊 **Monthly Report**',
+  attachments: [
+    {
+      text: 'Sales have increased by 20% compared to last month.',
+      callback_id: 'monthly_report',  // Required for attachments with actions
+      actions: [
+        {
+          type: 'button',
+          name: 'view_report',
+          text: 'View Full Report',
+          value: 'view_full_report',
+          style: 'blue'
+        },
+        {
+          type: 'button',
+          name: 'export_data',
+          text: 'Export Data',
+          value: 'export_report_data',
+          style: 'green'
+        }
+      ]
+    }
+  ]
+})
+```
+
+### Handling Button Callbacks
+
+When a user clicks a button in Synology Chat, a callback is sent to your webhook endpoint. The payload includes the `callback_id` you specified and information about which button was clicked:
+
+```javascript
+fastify.register(synologyChat, {
+  onMessage: (payload) => {
+    // Check if this is a button callback
+    if (payload.actions && payload.callback_id) {
+      const action = payload.actions[0]
+      console.log(`Button clicked: ${action.name} with value: ${action.value}`)
+      
+      // Handle different callback types
+      if (payload.callback_id === 'monthly_report') {
+        if (action.name === 'view_report') {
+          return { text: 'Showing monthly report details...' }
+        } else if (action.name === 'export_data') {
+          return { text: 'Exporting report data...' }
+        }
+      }
+      
+      // Default response for unknown buttons
+      return { text: `Button '${action.name}' clicked with value '${action.value}'` }
+    }
+    
+    // Handle regular messages
+    return { text: 'Message received!' }
+  }
+})
+```
+
+The response you return will replace the original message in the Synology Chat interface.
+
 ### Using Custom Webhook URL
 
 You can override the default webhook URL by passing a second parameter to `sendMessage`:
